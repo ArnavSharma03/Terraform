@@ -1,0 +1,128 @@
+Terraform Basics
+
+Infrastructure as Code tool by HashiCorp — provision cloud infra using config files.
+
+
+What is Terraform?
+
+Defines infrastructure using HCL (HashiCorp Configuration Language)
+Cloud-agnostic — AWS, Azure, GCP, and more
+Declarative — you say what you want, Terraform figures out how
+Tracks infrastructure using a state file
+
+
+Core Workflow
+init → validate → plan → apply → destroy
+CommandWhat it doesterraform initDownload providers & set up projectterraform validateCheck syntax errorsterraform fmtFormat codeterraform planPreview what will changeterraform applyCreate / update infrastructureterraform destroyDelete all managed infrastructure
+
+Key Concepts
+TermMeaningProviderPlugin to talk to a cloud (AWS, Azure, etc.)ResourceA piece of infra (EC2, S3, VPC...)StateFile that tracks what Terraform createdModuleReusable group of resourcesData SourceRead existing infra (not managed by TF)OutputExpose values after applyVariableInput to make config flexibleBackendWhere state file is stored
+
+Provider
+hclterraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+Resource
+hclresource "aws_instance" "web" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "MyServer"
+  }
+}
+
+Variables
+hcl# Declare
+variable "instance_type" {
+  type    = string
+  default = "t2.micro"
+}
+
+# Use
+resource "aws_instance" "web" {
+  instance_type = var.instance_type
+}
+Set values in terraform.tfvars:
+hclinstance_type = "t3.micro"
+
+Outputs
+hcloutput "public_ip" {
+  value = aws_instance.web.public_ip
+}
+bashterraform output public_ip
+
+State
+
+Stored in terraform.tfstate
+Tracks all resources Terraform manages
+Use remote backend (S3, Terraform Cloud) for team work
+
+bashterraform state list          # List resources
+terraform state show <name>   # Show resource details
+
+Modules
+Reusable blocks of config.
+hclmodule "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.0.0"
+
+  name = "my-vpc"
+  cidr = "10.0.0.0/16"
+}
+
+count vs for_each
+hcl# count — numbered
+resource "aws_instance" "server" {
+  count         = 3
+  instance_type = "t2.micro"
+  tags          = { Name = "server-${count.index}" }
+}
+
+# for_each — named (preferred)
+resource "aws_instance" "server" {
+  for_each      = toset(["web", "api", "db"])
+  instance_type = "t2.micro"
+  tags          = { Name = each.key }
+}
+
+Conditional & locals
+hcllocals {
+  env           = "prod"
+  instance_type = local.env == "prod" ? "t3.large" : "t2.micro"
+}
+
+Remote Backend (S3)
+hclterraform {
+  backend "s3" {
+    bucket         = "my-tf-state"
+    key            = "prod/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "tf-state-lock"
+    encrypt        = true
+  }
+}
+
+Interview Quick Hits
+What is Terraform state?
+A JSON file that maps config to real resources. Needed to track what exists and detect changes.
+Terraform vs Ansible?
+Terraform = provisioning infra. Ansible = configuring software on servers.
+What is state locking?
+Prevents two people from running apply at the same time. Uses DynamoDB with S3 backend.
+count vs for_each?
+for_each is preferred — removing an item in count causes all later resources to be recreated.
+What is a data source?
+Reads existing infra not managed by Terraform. Uses data {} block.
+What is drift?
+When real infra differs from Terraform state (e.g., manual changes). Detected by terraform plan.
