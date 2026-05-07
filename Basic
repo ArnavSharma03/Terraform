@@ -1,128 +1,32 @@
-Terraform Basics
+# 100 Days of Cloud: Day 1 - Infrastructure as Code (IaC) Foundations
 
-Infrastructure as Code tool by HashiCorp — provision cloud infra using config files.
-
-
-What is Terraform?
-
-Defines infrastructure using HCL (HashiCorp Configuration Language)
-Cloud-agnostic — AWS, Azure, GCP, and more
-Declarative — you say what you want, Terraform figures out how
-Tracks infrastructure using a state file
-
-
-Core Workflow
-init → validate → plan → apply → destroy
-CommandWhat it doesterraform initDownload providers & set up projectterraform validateCheck syntax errorsterraform fmtFormat codeterraform planPreview what will changeterraform applyCreate / update infrastructureterraform destroyDelete all managed infrastructure
-
-Key Concepts
-TermMeaningProviderPlugin to talk to a cloud (AWS, Azure, etc.)ResourceA piece of infra (EC2, S3, VPC...)StateFile that tracks what Terraform createdModuleReusable group of resourcesData SourceRead existing infra (not managed by TF)OutputExpose values after applyVariableInput to make config flexibleBackendWhere state file is stored
-
-Provider
-hclterraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-}
-
-Resource
-hclresource "aws_instance" "web" {
-  ami           = "ami-0c55b159cbfafe1f0"
-  instance_type = "t2.micro"
-
-  tags = {
-    Name = "MyServer"
-  }
-}
-
-Variables
-hcl# Declare
-variable "instance_type" {
-  type    = string
-  default = "t2.micro"
-}
-
-# Use
-resource "aws_instance" "web" {
-  instance_type = var.instance_type
-}
-Set values in terraform.tfvars:
-hclinstance_type = "t3.micro"
-
-Outputs
-hcloutput "public_ip" {
-  value = aws_instance.web.public_ip
-}
-bashterraform output public_ip
-
-State
-
-Stored in terraform.tfstate
-Tracks all resources Terraform manages
-Use remote backend (S3, Terraform Cloud) for team work
-
-bashterraform state list          # List resources
-terraform state show <name>   # Show resource details
-
-Modules
-Reusable blocks of config.
-hclmodule "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "5.0.0"
-
-  name = "my-vpc"
-  cidr = "10.0.0.0/16"
-}
-
-count vs for_each
-hcl# count — numbered
-resource "aws_instance" "server" {
-  count         = 3
-  instance_type = "t2.micro"
-  tags          = { Name = "server-${count.index}" }
-}
-
-# for_each — named (preferred)
-resource "aws_instance" "server" {
-  for_each      = toset(["web", "api", "db"])
-  instance_type = "t2.micro"
-  tags          = { Name = each.key }
-}
-
-Conditional & locals
-hcllocals {
-  env           = "prod"
-  instance_type = local.env == "prod" ? "t3.large" : "t2.micro"
-}
-
-Remote Backend (S3)
-hclterraform {
-  backend "s3" {
-    bucket         = "my-tf-state"
-    key            = "prod/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "tf-state-lock"
-    encrypt        = true
-  }
-}
-
-Interview Quick Hits
-What is Terraform state?
-A JSON file that maps config to real resources. Needed to track what exists and detect changes.
-Terraform vs Ansible?
-Terraform = provisioning infra. Ansible = configuring software on servers.
-What is state locking?
-Prevents two people from running apply at the same time. Uses DynamoDB with S3 backend.
-count vs for_each?
-for_each is preferred — removing an item in count causes all later resources to be recreated.
-What is a data source?
-Reads existing infra not managed by Terraform. Uses data {} block.
-What is drift?
-When real infra differs from Terraform state (e.g., manual changes). Detected by terraform plan.
+1.  Goal: Transition from manual AWS Console clicks to automated code.
+2.  IaC allows for version control, consistency, and rapid deployment.
+3.  Terraform (TF) is an open-source, provider-agnostic tool by HashiCorp.
+4.  It uses HCL (HashiCorp Configuration Language) for declarative logic.
+5.  CloudFormation (CFN) is AWS's native infrastructure service.
+6.  It uses YAML or JSON templates to manage resources within AWS.
+7.  Key Difference: TF is multi-cloud; CFN is purpose-built for AWS.
+8.  Setup: Installed Terraform CLI and configured the AWS Provider.
+9.  TF Logic: The `provider` block defines where resources are created.
+10. Command: `terraform init` downloads necessary provider plugins.
+11. Command: `terraform plan` shows a preview of changes before execution.
+12. Command: `terraform apply` executes the code to build infrastructure.
+13. CFN Logic: Every template starts with `AWSTemplateFormatVersion`.
+14. CFN Structure: Includes `Description`, `Parameters`, and `Resources`.
+15. A "Stack" in CFN is a single unit of resources managed together.
+16. TF State: Tracks the mapping between code and real-world resources.
+17. The `terraform.tfstate` file is critical for tracking changes over time.
+18. Security: Never commit `.tfstate` files to GitHub (use .gitignore).
+19. CFN State: Managed automatically by AWS behind the scenes.
+20. Declarative approach: We define the "what," the tool handles the "how."
+21. Resource Dependency: Both tools automatically calculate build order.
+22. Immutability: Changes often involve replacing resources for stability.
+23. Portability: Learning TF allows for management of OCI, Azure, and AWS.
+24. Integration: CFN integrates deeply with other native AWS services.
+25. Documentation: Used `Description` in CFN to detail stack purpose.
+26. Configuration: Set the AWS Region to `us-east-1` for initial tests.
+27. Idempotency: Running the same code twice results in no new changes.
+28. Versioning: Used provider versioning in TF to ensure environment stability.
+29. Lifecycle: Managed the initial creation process for a "WaitCondition."
+30. Outcome: Successfully initialized environment for automated deployments.
